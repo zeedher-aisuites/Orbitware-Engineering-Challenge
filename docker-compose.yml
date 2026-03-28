@@ -1,0 +1,24 @@
+services:
+  servicio_a:
+    build: ./servicio_a
+    ports:
+      - "8000:8000"
+    # Le damos un nombre de red interno
+    networks:
+      - orbitware_net
+
+  servicio_b:
+    build: ./servicio_b
+    environment:
+      # Pasa la API Key desde tu archivo .env local
+      - LLM_API_KEY=${LLM_API_KEY}
+      # Usamos el nombre del contenedor "servicio_a" para la URL de destino
+      - TARGET_URL=http://servicio_a:8000/ingest
+    depends_on:
+      - servicio_a
+    networks:
+      - orbitware_net
+
+networks:
+  orbitware_net:
+    driver: bridge
