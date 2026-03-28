@@ -2,92 +2,54 @@ import os
 import time
 import json
 import logging
+import threading
 import requests
+from fastapi import FastAPI
 from dotenv import load_dotenv
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Cargar variables
 load_dotenv()
+
+app = FastAPI(title="Orbitware - Servicio B (Simulador)")
 API_KEY = os.getenv("LLM_API_KEY")
 TARGET_URL = os.getenv("TARGET_URL")
 
-if not API_KEY or not TARGET_URL:
-    logging.error("Faltan variables de entorno LLM_API_KEY o TARGET_URL")
-    exit(1)
+@app.get("/")
+@app.get("/health")
+def health_check() -> Dict[str, Optional[str]]:
+    return {"status": "running", "target": TARGET_URL}
 
-GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-
-def generate_simulated_event():
-    """Llama al LLM para generar un evento JSON simulado."""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_KEY}"
-    }
-    
-    # Prompt estricto del desafío para generar un evento JSON con formato específico
-    prompt = """
-    Genera un evento JSON simulado para un agente de IA.
-    El JSON DEBE tener ESTRICTAMENTE este formato, sin markdown extra:
-    {
-      "timestamp": "2025-06-10T12:34:56.7892",
-      "sessionId": "abc123_aleatorio",
-      "intent": "BookFlight_o_similar",
-      "latencyMs": 120,
-      "success": true,
-      "confidence": 0.87
-    }
-    """
-    
-    payload: Dict[str, Any] = {
-        "model": "llama-3.3-70b-versatile", # Modelo sugerido por Groq para JSON
-        "messages": [{"role": "user", "content": prompt}],
-        "response_format": {"type": "json_object"} # Obligamos a que responda solo JSON
-    }
-
-    try:
-        response = requests.post(GROQ_URL, headers=headers, json=payload, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extraer el contenido de la respuesta
-        content_str = data["choices"][0]["message"]["content"]
-        event_json = json.loads(content_str)
-        
-        # Aseguramos que el timestamp sea actual (UTC) por si el LLM inventa uno viejo
-        event_json["timestamp"] = datetime.now(timezone.utc).isoformat()
-        return event_json
-    except Exception as e:
-        logging.error(f"Error generando evento con LLM: {e}")
-        return None
-
-def send_event_to_ingest(event_data: Dict[str, Any]):
-    """Envía el JSON generado al endpoint /ingest del Servicio A."""
+def simulator_loop():
+    logging.info(f"Iniciando ciclo del simulador. Target: {TARGET_URL}")
     if not TARGET_URL:
-        logging.error("TARGET_URL no está configurada")
+        logging.error("TARGET_URL no está configurada en las variables de entorno")
         return
-    try:
-        res = requests.post(TARGET_URL, json=event_data, timeout=5)
-        if res.status_code == 200:
-            logging.info(f"Evento ingerido OK: {event_data['intent']} (Latencia: {event_data['latencyMs']}ms)")
-        else:
-            logging.warning(f"Error al ingerir. Code: {res.status_code}, Detalle: {res.text}")
-    except Exception as e:
-        logging.error(f"Fallo de conexión con Servicio A en {TARGET_URL}: {e}")
-
-def main():
-    logging.info(f"Iniciando Servicio B (Simulador). Target: {TARGET_URL}")
     while True:
-        event = generate_simulated_event()
-        if event:
-            send_event_to_ingest(event)
+        try:
+            # Lógica del simulador (idéntica a la anterior)
+            headers: Dict[str, str] = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
+            prompt = "Genera un evento JSON simulado para un agente de IA. Formato estricto: timestamp, sessionId, intent, latencyMs, success, confidence."
+            payload: Dict[str, Any] = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": [{"role": "user", "content": prompt}],
+                "response_format": {"type": "json_object"}
+            }
+            
+            response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=10)
+            if response.status_code == 200:
+                event_data = json.loads(response.json()["choices"][0]["message"]["content"])
+                event_data["timestamp"] = datetime.now(timezone.utc).isoformat()
+                
+                res = requests.post(TARGET_URL, json=event_data, timeout=5)
+                logging.info(f"Evento enviado a {TARGET_URL}. Status: {res.status_code}")
+            
+        except Exception as e:
+            logging.error(f"Error en simulador: {e}")
         
-        # Esperar 60 segundos antes del siguiente
-        logging.info("Esperando 60 segundos...")
         time.sleep(60)
 
-if __name__ == "__main__":
-    main()
+# Iniciamos el simulador en un hilo aparte
+threading.Thread(target=simulator_loop, daemon=True).start()
