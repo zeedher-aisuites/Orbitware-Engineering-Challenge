@@ -1,9 +1,0 @@
-python -m venv venv
-venv\Scripts\activate
-pip install -r servicio_a/requirements.txt
-uvicorn servicio_a.main:app --reload
-
-test de apis en http://127.0.0.1:8000/docs#/
-
-pip install -r servicio_b/requirements.txt
-python servicio_b/main.py
