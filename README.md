@@ -1,4 +1,4 @@
-# Orbitware Engineering Challenge - Voice AI Metrics
+# Orbitware Engineering Challenge
 
 Sistema de ingesta y monitoreo de métricas para un agente de IA, compuesto por microservicios contenerizados y desplegados en Render.
 
@@ -85,5 +85,13 @@ Cumplimiento estricto del formato de texto plano solicitado para la integración
 El simulador confirma su correcta operatividad y la URL de destino configurada mediante variables de entorno.
 
 ![POW_6: Health check y Target URL del simulador](./images/POW_6.png)
+
+---
+---
+## 🎥 Presentación de Video (Loom)
+
+### En el siguiente enlace se encuentra la explicación de la arquitectura, el código y la demostración en vivo:
+
+https://www.loom.com/share/dfa68df86d9b4b8991a9b19009dc8b51
 
 ---

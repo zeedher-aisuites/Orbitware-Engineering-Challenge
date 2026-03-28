@@ -29,7 +29,7 @@ def simulator_loop():
         return
     while True:
         try:
-            # Lógica del simulador (idéntica a la anterior)
+            # Lógica del simulador
             headers: Dict[str, str] = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
             prompt = "Genera un evento JSON simulado para un agente de IA. Formato estricto: timestamp, sessionId, intent, latencyMs, success, confidence."
             payload: Dict[str, Any] = {
